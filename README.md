@@ -20,3 +20,6 @@ getUser(id) // To get all details about a user
 ```
 # Database
 You need to make a database, a table called users and edit the code to use the table names. (there are already premade once, just remove those and replace it with whatever info you need)
+
+Disclaimer:
+Only things included is the things that I have made in the project
