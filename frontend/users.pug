@@ -1,0 +1,9 @@
+script.
+  document.addEventListener("DOMContentLoaded", function(event) {
+    if(#{loggedIn} == false) {
+      return document.getElementById("validation").innerText = "Please Login";
+    }
+  });
+doctype html
+
+p#validation yay #{userID} successfully logged in
