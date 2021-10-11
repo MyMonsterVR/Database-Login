@@ -5,6 +5,8 @@ Made in NodeJS &amp; ExpressJS
 ```js
 NodeJS 14.18.0+
 A way to show the database
+Redis-Server
+
 ```
 To use this project, you need to open your `Terminal` and write `npm i` then it can download all dependencies needed to use it
 
