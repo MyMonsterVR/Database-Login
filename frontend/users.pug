@@ -1,7 +1,7 @@
 script.
   document.addEventListener("DOMContentLoaded", function(event) {
     if(#{loggedIn} == false) {
-      return document.getElementById("validation").innerText = "Please Login";
+      return window.location.href= "login.pug";
     }
   });
 doctype html

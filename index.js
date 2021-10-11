@@ -3,10 +3,13 @@ const con = require('./lib/connection.js'),
 	isReachable = require('is-reachable'),
 	sess = require('express-session'),
 	bodyParser = require('body-parser'),
-	encoder = bodyParser.urlencoded()
-Store = require('express-session').Store
+	cookieParser = require("cookie-parser"),
+	encoder = bodyParser.urlencoded(),
+	path = require('path'),
+	redis = require('redis'),
+	redisStore = require('connect-redis')(sess),
+	client = redis.createClient();
 
-var BetterMemoryStore = require('session-memory-store')(sess)
 
 const {
 	body,
@@ -31,6 +34,18 @@ setInterval(loadSite, 10000) // 10000ms, website live reloads every 10 minutes
 const app = express()
 var personList = []
 
+app.use(sess({
+	secret: 'Weneedaraise',
+	store: new redisStore({
+		host: 'localhost',
+		port: 6379,
+		client: client,
+		ttl: 260
+	}),
+	resave: false,
+	saveUninitialized: false,
+}))
+
 function loadSite() {
 	(async () => {
 		// Network Check
@@ -42,48 +57,68 @@ function loadSite() {
 		// view engine + public folder
 		app.set("views", "frontend")
 		app.set('view engine', 'pug')
-
-		//net2 = await isReachable('217.116.222.48') // HUSK AT RET I INDEX.PUG
+		app.use(bodyParser.json());
+		app.use(bodyParser.urlencoded({
+			extended: true
+		}));
+		app.use('/images', express.static('images'));
+		// net2 = await isReachable('217.116.222.48') // HUSK AT RET I INDEX.PUG
 		// Index site
 		app.get('/', function(req, res) {
-
 			res.render('index.pug', {
 				// sends net1 bool into the variable netstatus on index.pug
-				netstatus: net1,
+				netstatus: net1
+			})
+		})
+
+
+		app.get("/login.pug", function(req, res) {
+			res.render('login.pug', {
 				verifyFail: verificationFailed
 			})
 		})
 
-		// admin panel
-		app.get('/users.pug', function(req, res) {
-			//Users ID starts at 2
-			res.render('users.pug', {
-				loggedIn: verificationStep,
-				userID: req.app.get('userId')
-			})
-			verificationStep = false
-		})
-
 		// Login system
-		app.post("/", encoder, function(req, res) {
+		app.post("/authenticate", encoder, function(req, res) {
 			var Id = req.body.id
 			var password = req.body.password
 			db.query('SELECT * FROM users', (err, rows) => {
 				if (err) throw err;
 
 				db.query("select * from users where Id = ? and password = ?", [Id, password], function(error, results, fields) {
-					if (results.length > 0 && rows[Id - 3].status == "superuser") {
-						verificationStep = true
-						req.app.set('userId', Id)
+					if (results.length > 0 && rows[Id - 2].status == "superuser") {
+						req.session.key = Id;
+						console.log(req.session.key)
 						res.redirect("/users.pug")
+						//verificationStep = true
+						//res.app.set('verification', true)
 					} else {
-						verificationFailed = true
-						res.redirect("/")
+						//verificationFailed = true
+						res.redirect("/login.pug")
 					}
 					res.end()
 				})
 			});
+
+		})
+		// admin panel
+		app.get('/users.pug', function(req, res) {
+			let session = req.session
+			console.log(req.session.key)
+			console.log("user info: " + JSON.stringify(req.session))
+			if (session.key) {
+				console.log("DSAUIHD")
+				res.render('users.pug', {
+					loggedIn: res.app.get('verification'),
+					userID: "68"
+				})
+			} else {
+				console.log("error")
+				res.redirect("/login.pug")
+			}
+			//verificationStep = false
 		})
 	})()
 }
+
 app.listen(PORT)

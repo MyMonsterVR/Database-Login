@@ -1,0 +1,79 @@
+script.
+  document.addEventListener("DOMContentLoaded", function(event) {
+    if(#{verifyFail} == true) {
+      document.getElementById("errorCode").innerText = "Fejlede dit login. Venligst gentjek dit id og dit password";
+      return document.getElementById("errorCode").style.color = "red";
+    }
+  });
+
+doctype html
+head
+  meta(charset='UTF-8')
+  meta(http-equiv='X-UA-Compatible' content='IE=edge')
+  meta(name='viewport' content='width=device-width, initial-scale=1.0')
+  title Login
+  link(rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css')
+
+  style.
+    .card{
+    background-color: grey;
+    border: none !important;
+    }
+    .card.body {
+    background-color: rgb(0, 0, 0);
+    opacity: .8;
+    }
+    body {
+    background-color: grey;
+    }
+    .row{
+    background-color: white;
+    border-radius: 10px;
+    }
+    #box{
+    max-width: 600px;
+    margin-top: 10%;
+    }
+    #password{
+    min-width: 550px;
+    }
+    #username{
+    min-width: 550px;
+    }
+    h3{
+    min-width: 550px;
+    }
+    h6{
+    min-width: 550px;
+    }
+
+.card
+  .card-body.text-black.bg-white.align-items-center
+    img.mx-auto.d-block(src='/images/logo.png' width='100px' height='100px' alt='aarhustech logo')
+
+  // top af skærmen med logo
+  #box.container
+    .row
+      .col-sm-6.content
+        h3#login.login-mb-3.text-center login
+        h6#login.login-mb-7.text-center Please fill out the form
+        // grid system
+        form(action='/authenticate' method='POST')
+          .form-group
+            // username
+            label ID
+              input#username.form-control(type='username' name='id')
+          .form-group
+            // password
+            label Password
+            input#password.form-control(type='password' name='password')
+          .form-group.form-check
+            // -check box
+            input#remember.form-check-input(type='checkbox' name='checkbox')
+            label.form-check-label Remember me
+
+
+          button.btn.btn-class.border.border-dark login
+          script(src='https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js')
+          script(src='https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js')
+          script(src='https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js')
