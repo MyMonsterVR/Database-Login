@@ -17,6 +17,7 @@ getUserFirst(id) // Get a person first name from their id
 getUserMellem(id) // Get persons middle name from their id
 getUserLast(id) // Get a users surname from their id
 getUser(id) // To get all details about a user
+addUser(firstname, middlename, surname, role, pswd, birth) // Add a user to the database
 ```
 # Database
 You need to make a database, a table called users and edit the code to use the table names. (there are already premade once, just remove those and replace it with whatever info you need)
