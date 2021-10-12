@@ -1,9 +1,46 @@
-script.
-  document.addEventListener("DOMContentLoaded", function(event) {
-    if(#{loggedIn} == false) {
-      return window.location.href= "login.pug";
-    }
-  });
-doctype html
+html
+  head
+    title= 'BrugereDB'
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    link(href="//maxcdn.bootstrapcdn.com/bootswatch/3.3.0/flatly/bootstrap.min.css", rel="stylesheet")
+    link(href="//cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css", rel="stylesheet")
 
-p#validation yay #{userID} successfully logged in
+
+  body
+    // Title
+    div.container.jumbotron
+      h1.header BRUGER DATABASE
+    div.container
+      script(src='//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js')
+      script(src='//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js')
+      script(src='//cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js')
+      script.
+        $(document).ready(function() {
+          $('#resultTable').DataTable();
+        });
+      div
+        // table header
+        table#resultTable.table.table-hover.datatables
+          thead
+            tr
+              th ID
+              th FORNAVN
+              th MELLEMNAVN
+              th EFTERNAVN
+              th ACTIONS
+          tbody
+
+            // make pages so it there is less info at once
+            - var amount = 0
+            mixin tableMaker(min, max)
+              each user in users
+                if amount >= min && amount <= max
+                  tr
+                    td= user.id
+                    td= user.fornavn
+                    td= user.mellemnavn
+                    td= user.efternavn
+                - amount += 1
+            +tableMaker(amount, amount+10)

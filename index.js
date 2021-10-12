@@ -44,6 +44,9 @@ app.use(sess({
 	}),
 	resave: false,
 	saveUninitialized: false,
+	cookie: {
+		maxAge: 20000
+	}
 }))
 
 function loadSite() {
@@ -62,7 +65,8 @@ function loadSite() {
 			extended: true
 		}));
 		app.use('/images', express.static('images'));
-		// net2 = await isReachable('217.116.222.48') // HUSK AT RET I INDEX.PUG
+		// net2 = await isReachable('217.116.222.48') // an extra connection
+
 		// Index site
 		app.get('/', function(req, res) {
 			res.render('index.pug', {
@@ -71,54 +75,95 @@ function loadSite() {
 			})
 		})
 
-
+		//Login site
 		app.get("/login.pug", function(req, res) {
 			res.render('login.pug', {
-				verifyFail: verificationFailed
+				verifyFail: req.session.verificationFailed // Transfer check over to pug file
 			})
 		})
 
-		// Login system
+		// Login system authentication
 		app.post("/authenticate", encoder, function(req, res) {
 			var Id = req.body.id
 			var password = req.body.password
 			db.query('SELECT * FROM users', (err, rows) => {
-				if (err) throw err;
-
 				db.query("select * from users where Id = ? and password = ?", [Id, password], function(error, results, fields) {
-					if (results.length > 0 && rows[Id - 2].status == "superuser") {
+					if (err) throw err;
+					if (results.length > 0 && rows[Id].status == "superuser") {
 						req.session.key = Id;
 						console.log(req.session.key)
-						res.redirect("/users.pug")
-						//verificationStep = true
-						//res.app.set('verification', true)
+						res.redirect("/admin.pug")
 					} else {
-						//verificationFailed = true
+						req.session.verificationFailed = true // Check to make sure fail message is shown
 						res.redirect("/login.pug")
 					}
-					res.end()
 				})
 			});
 
 		})
+
 		// admin panel
-		app.get('/users.pug', function(req, res) {
+		app.get('/admin.pug', function(req, res) {
 			let session = req.session
-			console.log(req.session.key)
-			console.log("user info: " + JSON.stringify(req.session))
 			if (session.key) {
-				console.log("DSAUIHD")
-				res.render('users.pug', {
-					loggedIn: res.app.get('verification'),
-					userID: "68"
+				res.render('admin.pug', {
+					userID: session.key
 				})
 			} else {
-				console.log("error")
+				req.session.verificationFailed = true // Check to make sure fail message is shown
 				res.redirect("/login.pug")
 			}
-			//verificationStep = false
 		})
+
+		db.query('SELECT * from users', function(err, rows, fields) {
+			for (var i = 0; i < rows.length; i++) {
+
+				// Create an object to save current row's data
+				var person = {
+					'fornavn': rows[i].Fornavn,
+					'mellemnavn': rows[i].mellemnavn,
+					'efternavn': rows[i].Efternavn,
+					'id': rows[i].Id
+				}
+				// Add object into array
+				personList.push(person);
+			}
+		})
+
+		function getPerson() {
+			db.query('SELECT * from users', function(err, rows, fields) {
+				if (err) res.status(500).json({
+					"status_code": 500,
+					"status_message": "Internal server error"
+				})
+				else {
+					for (var i = 0; i < rows.length; i++) {
+
+						personList[i].id
+					}
+				}
+			})
+		}
+
+		getPerson()
+
+
+		app.get('/users.pug', function(req, res) {
+			res.render('users.pug', {
+				users: personList
+			})
+		})
+
+		app.post("/logout", encoder, function(req, res) {
+			console.log("logged out")
+			req.session.destroy(function(err) {
+				res.redirect('/'); //Inside a callback… bulletproof!
+			});
+		})
+
+
 	})()
+
 }
 
 app.listen(PORT)
