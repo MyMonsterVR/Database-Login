@@ -1,23 +1,23 @@
 const con = require('./lib/connection.js'),
-	express = require('express'),
-	isReachable = require('is-reachable'),
-	sess = require('express-session'),
-	bodyParser = require('body-parser'),
-	cookieParser = require("cookie-parser"),
-	encoder = bodyParser.urlencoded(),
-	path = require('path'),
-	redis = require('redis'),
-	redisStore = require('connect-redis')(sess),
-	client = redis.createClient();
+  express = require('express'),
+  isReachable = require('is-reachable'),
+  sess = require('express-session'),
+  bodyParser = require('body-parser'),
+  cookieParser = require("cookie-parser"),
+  encoder = bodyParser.urlencoded({ extended: true }),
+  path = require('path'),
+  redis = require('redis'),
+  redisStore = require('connect-redis')(sess),
+  client = redis.createClient();
 
 
 const {
-	body,
-	validationResult
+  body,
+  validationResult
 } = require('express-validator')
 
 //Hosting Port
-const PORT = 80
+const PORT = 3000
 
 // Network Display bool
 var status = "net1"
@@ -29,141 +29,158 @@ var verificationFailed = false
 
 // NIX PILLE
 loadSite()
-setInterval(loadSite, 10000) // 10000ms, website live reloads every 10 minutes
+setInterval(loadSite, 600000) // 600000ms, website live reloads every 10 minutes
 
 const app = express()
 var personList = []
 
 app.use(sess({
-	secret: 'Weneedaraise',
-	store: new redisStore({
-		host: 'localhost',
-		port: 6379,
-		client: client,
-		ttl: 260
-	}),
-	resave: false,
-	saveUninitialized: false,
-	cookie: {
-		maxAge: 20000
-	}
+  secret: 'WeNeedARaise',
+  store: new redisStore({
+    host: 'localhost',
+    port: 6379,
+    client: client,
+    ttl: 260
+  }),
+  resave: true,
+  saveUninitialized: true,
+  cookie: {
+    maxAge: 100000
+  }
 }))
 
-function loadSite() {
-	(async () => {
-		// Network Check
-		net1 = await isReachable('217.116.222.48') // LAV FLERE HVIS I FÅR FLERE IP'ER
+// Database connection
+var db = con.getConnection()
 
-		// Database connection
-		var db = con.getConnection()
+async function loadSite() {
+    var titleText = con.getNewsTitle()
+    var bodyText = con.getNewsBody()
+    // Network Check
+    net1 = await isReachable('217.116.222.48') // LAV FLERE HVIS I FÅR FLERE IP'ER
+    // view engine + public folder
+    app.set("views", "frontend")
+    app.set('view engine', 'pug')
+    app.use('/Admin', express.static('/Admin'));
+    app.use(bodyParser.json())
+    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use('/Admin', express.static('Admin'));
+    app.use('/images', express.static('images'));
+    // net2 = await isReachable('217.116.222.48') // an extra connection
 
-		// view engine + public folder
-		app.set("views", "frontend")
-		app.set('view engine', 'pug')
-		app.use(bodyParser.json());
-		app.use(bodyParser.urlencoded({
-			extended: true
-		}));
-		app.use('/images', express.static('images'));
-		// net2 = await isReachable('217.116.222.48') // an extra connection
+    // Index site
+    app.get('/', function(req, res) {
+      res.render('index.pug', {
+        // sends net1 bool into the variable netstatus on index.pug
+        netstatus: net1,
+        getNewsTitle: titleText,
+        getNewsBody: bodyText
+      })
+    })
 
-		// Index site
-		app.get('/', function(req, res) {
-			res.render('index.pug', {
-				// sends net1 bool into the variable netstatus on index.pug
-				netstatus: net1
-			})
-		})
+    //Login site
+    app.get("/login.pug", function(req, res) {
+      res.render('login.pug', {
+        verifyFail: req.session.verificationFailed // Transfer check over to pug file
+      })
+    })
 
-		//Login site
-		app.get("/login.pug", function(req, res) {
-			res.render('login.pug', {
-				verifyFail: req.session.verificationFailed // Transfer check over to pug file
-			})
-		})
+    // Login system authentication
+    app.post("/authenticate", encoder, function(req, res) {
+      var Id = req.body.id
+      var password = req.body.password
+      db.query('SELECT * FROM users', (err, rows) => {
+        db.query("select * from users where Id = ? and password = ?", [Id, password], function(error, results, fields) {
+          if (err) throw err;
+          if (results.length > 0 && rows[Id].status == "superuser") {
+            req.session.key = Id;
+            res.redirect("Admin/dashboard.pug")
+          } else {
+            req.session.verificationFailed = true // Check to make sure fail message is shown
+            res.redirect("/login.pug")
+          }
+        })
+      });
 
-		// Login system authentication
-		app.post("/authenticate", encoder, function(req, res) {
-			var Id = req.body.id
-			var password = req.body.password
-			db.query('SELECT * FROM users', (err, rows) => {
-				db.query("select * from users where Id = ? and password = ?", [Id, password], function(error, results, fields) {
-					if (err) throw err;
-					if (results.length > 0 && rows[Id].status == "superuser") {
-						req.session.key = Id;
-						console.log(req.session.key)
-						res.redirect("/admin.pug")
-					} else {
-						req.session.verificationFailed = true // Check to make sure fail message is shown
-						res.redirect("/login.pug")
-					}
-				})
-			});
+    })
 
-		})
+    // admin panel
+    app.get('/Admin/dashboard.pug', function(req, res) {
+      let session = req.session
+      if (session.key) {
+        res.render('Admin/dashboard.pug'), {
+          userID: session.key
+        }
+      } else {
+        req.session.verificationFailed = true // Check to make sure fail message is shown
+        res.redirect("/login.pug")
+      }
+    })
 
-		// admin panel
-		app.get('/admin.pug', function(req, res) {
-			let session = req.session
-			if (session.key) {
-				res.render('admin.pug', {
-					userID: session.key
-				})
-			} else {
-				req.session.verificationFailed = true // Check to make sure fail message is shown
-				res.redirect("/login.pug")
-			}
-		})
+    app.get('/Admin/database.pug', function(req, res) {
+      let session = req.session
+      if (session.key) {
+        res.render('Admin/database.pug'), {
+          userID: session.key
+        }
+      } else {
+        req.session.verificationFailed = true // Check to make sure fail message is shown
+        res.redirect("/login.pug")
+      }
+    })
 
-		db.query('SELECT * from users', function(err, rows, fields) {
-			for (var i = 0; i < rows.length; i++) {
+    // admin panel
+    app.get('/Admin/messagemanager.pug', function(req, res) {
+      let session = req.session
+      if (session.key) {
+        res.render('Admin/messagemanager.pug'), {
 
-				// Create an object to save current row's data
-				var person = {
-					'fornavn': rows[i].Fornavn,
-					'mellemnavn': rows[i].mellemnavn,
-					'efternavn': rows[i].Efternavn,
-					'id': rows[i].Id
-				}
-				// Add object into array
-				personList.push(person);
-			}
-		})
+        }
+      } else {
+        req.session.verificationFailed = true // Check to make sure fail message is shown
+        res.redirect("/login.pug")
+      }
+    })
 
-		function getPerson() {
-			db.query('SELECT * from users', function(err, rows, fields) {
-				if (err) res.status(500).json({
-					"status_code": 500,
-					"status_message": "Internal server error"
-				})
-				else {
-					for (var i = 0; i < rows.length; i++) {
+    app.post('/postnews', function(req, res) {
+      var title = req.body.title
+      var body = req.body.msg
+      con.addNews(title.toString(), body.toString(), null, null)
+      res.redirect("Admin/dashboard.pug")
+    })
 
-						personList[i].id
-					}
-				}
-			})
-		}
+    app.get('/Admin/users.pug', function(req, res) {
+      let session = req.session
+      if (session.key) {
+        res.render('Admin/users.pug'), {
+          userID: session.key
+        }
+      } else {
+        req.session.verificationFailed = true // Check to make sure fail message is shown
+        res.redirect("/login.pug")
+      }
+    })
 
-		getPerson()
+    app.post("/logout", function(req, res) {
+      console.log("logged out")
+      req.session.destroy(function(err) {
+        res.redirect('/'); //Inside a callback… bulletproof!
+      });
+    })
 
+    app.post("/createUser", function(req, res) {
+      fname = req.body.fornavn
+      mname = req.body.mellemnavn
+      sname = req.body.efternavn
+      rname = req.body.role
 
-		app.get('/users.pug', function(req, res) {
-			res.render('users.pug', {
-				users: personList
-			})
-		})
+      if (mname == "")
+        mname = null
+      if (rname != "user" || rname != "superuser")
+        rname = "user"
 
-		app.post("/logout", encoder, function(req, res) {
-			console.log("logged out")
-			req.session.destroy(function(err) {
-				res.redirect('/'); //Inside a callback… bulletproof!
-			});
-		})
+      con.addUser(fname, mname, sname, rname, null)
 
-
-	})()
-
+      res.redirect("Admin/users.pug?added=true")
+    })
 }
-
 app.listen(PORT)
