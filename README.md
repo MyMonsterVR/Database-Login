@@ -11,7 +11,7 @@ Redis-Server
 To use this project, you need to open your `Terminal` and write `npm i` then it can download all dependencies needed to use it
 
 # Functions
-**Database funktioner**
+**Database functions**
 ```JS
 getAllUserIDs() // Get a list of all ids in the system
 getUserID("name") // Get a users id from their first name
